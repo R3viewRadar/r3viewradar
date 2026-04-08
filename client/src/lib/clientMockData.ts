@@ -2,7 +2,7 @@
  * Client-side mock data generator — used as fallback when the backend API is unreachable
  * (e.g., when deployed to a static host like r3viewradar.com without the Express server).
  */
-import type { SearchResultData, Review, ReviewResult, SourceLink, NearbyLocation } from "@shared/schema";
+import type { SearchResultData, Review, ReviewResult, SourceLink, NearbyLocation, ContactInfo } from "@shared/schema";
 
 const BUSINESS_PLATFORMS = [
   { name: "Google", icon: "google", url: "https://google.com/maps" },
@@ -244,6 +244,9 @@ export function generateClientMockData(
     }).sort((a, b) => parseFloat(a.distance!) - parseFloat(b.distance!));
   }
 
+  // Generate contact info
+  const contactInfo: ContactInfo = generateContactInfo(query, type, location);
+
   return {
     search: {
       id: 1,
@@ -264,5 +267,36 @@ export function generateClientMockData(
     allReviews: allReviews.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     sourceLinks,
     nearbyLocations,
+    contactInfo,
+  };
+}
+
+function generateContactInfo(query: string, type: "business" | "product", location?: string | null): ContactInfo {
+  const slug = query.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 20);
+  const areaCode = ["212", "310", "415", "305", "312", "702", "404", "617", "503", "206"][query.length % 10];
+  const streets = ["Main St", "Broadway", "Market St", "Oak Ave", "5th Ave", "Park Dr"];
+  const cities = location && !location.match(/^-?\d+\./) ? location : "Los Angeles, CA";
+  const streetNum = 100 + (query.charCodeAt(0) * 37) % 9000;
+  const street = streets[query.length % streets.length];
+
+  if (type === "product") {
+    return {
+      name: query,
+      website: `https://www.${slug}.com`,
+      email: `support@${slug}.com`,
+      mapsUrl: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+    };
+  }
+
+  // Business
+  const closingHour = 7 + (query.charCodeAt(0) % 5); // 7-11 PM
+  return {
+    name: query,
+    address: `${streetNum} ${street}, ${cities}`,
+    phone: `(${areaCode}) ${String(200 + query.length * 17).slice(0, 3)}-${String(1000 + query.charCodeAt(0) * 7).slice(0, 4)}`,
+    email: `info@${slug}.com`,
+    website: `https://www.${slug}.com`,
+    mapsUrl: `https://www.google.com/maps/search/${encodeURIComponent(query + (location ? " " + location : ""))}`,
+    hours: `Open until ${closingHour} PM`,
   };
 }

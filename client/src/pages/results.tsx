@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Search, Building2, Package, ExternalLink,
   ThumbsUp, ThumbsDown, Minus, CheckCircle, Filter,
-  ChevronDown, Star, Globe, TrendingUp, Wifi, WifiOff, AlertCircle, MapPin
+  ChevronDown, Star, Globe, TrendingUp, Wifi, WifiOff, AlertCircle, MapPin,
+  Phone, Mail, Map, Clock, Navigation
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { StarRating } from "@/components/StarRating";
@@ -328,6 +329,102 @@ export default function ResultsPage() {
                 </p>
               </div>
             </div>
+
+            {/* Contact Action Bar */}
+            {data.contactInfo && (
+              <div className="bg-card border border-border rounded-xl p-4 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  {/* Business info */}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-base font-bold text-foreground truncate">{data.contactInfo.name}</h2>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                      {data.contactInfo.address && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin size={10} className="shrink-0" />
+                          {data.contactInfo.address}
+                        </span>
+                      )}
+                      {data.contactInfo.hours && (
+                        <span className="text-xs text-green-500 flex items-center gap-1">
+                          <Clock size={10} className="shrink-0" />
+                          {data.contactInfo.hours}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {data.contactInfo.mapsUrl && (
+                      <a
+                        href={data.contactInfo.mapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-testid="contact-maps"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-semibold hover:bg-primary/20 transition-all"
+                      >
+                        <Navigation size={13} />
+                        <span>Maps</span>
+                      </a>
+                    )}
+                    {data.contactInfo.phone && (
+                      <a
+                        href={`tel:${data.contactInfo.phone.replace(/[^+\d]/g, "")}`}
+                        data-testid="contact-call"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-500 text-xs font-semibold hover:bg-green-500/20 transition-all"
+                      >
+                        <Phone size={13} />
+                        <span>Call</span>
+                      </a>
+                    )}
+                    {data.contactInfo.email && (
+                      <a
+                        href={`mailto:${data.contactInfo.email}`}
+                        data-testid="contact-email"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold hover:bg-blue-500/20 transition-all"
+                      >
+                        <Mail size={13} />
+                        <span>Email</span>
+                      </a>
+                    )}
+                    {data.contactInfo.website && (
+                      <a
+                        href={data.contactInfo.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-testid="contact-website"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary border border-border text-foreground text-xs font-semibold hover:border-primary/30 transition-all"
+                      >
+                        <Globe size={13} />
+                        <span>Website</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Expanded details row */}
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-3 pt-3 border-t border-border/50">
+                  {data.contactInfo.phone && (
+                    <a href={`tel:${data.contactInfo.phone.replace(/[^+\d]/g, "")}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                      <Phone size={10} />
+                      {data.contactInfo.phone}
+                    </a>
+                  )}
+                  {data.contactInfo.email && (
+                    <a href={`mailto:${data.contactInfo.email}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                      <Mail size={10} />
+                      {data.contactInfo.email}
+                    </a>
+                  )}
+                  {data.contactInfo.website && (
+                    <a href={data.contactInfo.website} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+                      <Globe size={10} />
+                      {data.contactInfo.website.replace(/^https?:\/\/(www\.)?/, "")}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Summary cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

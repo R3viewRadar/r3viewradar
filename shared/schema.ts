@@ -66,6 +66,17 @@ export interface NearbyLocation {
   reviewCount?: number;
 }
 
+// Contact info for the searched entity
+export interface ContactInfo {
+  name: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  mapsUrl?: string;
+  hours?: string; // e.g. "Open until 9 PM"
+}
+
 // Aggregated result for a search
 export interface SearchResultData {
   search: Search;
@@ -80,4 +91,5 @@ export interface SearchResultData {
   allReviews: Review[];
   sourceLinks: SourceLink[];
   nearbyLocations?: NearbyLocation[];
+  contactInfo?: ContactInfo;
 }
