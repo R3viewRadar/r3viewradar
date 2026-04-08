@@ -1,0 +1,35 @@
+{
+  "name": "r3viewradar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "R3viewRadar — Universal review aggregator across Google, Yelp, Reddit, Amazon, TripAdvisor & more",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "vite",
+    "dev:server": "tsx watch api/index.ts",
+    "build": "vite build",
+    "start": "node api/dist/index.js",
+    "vercel-build": "vite build"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "snoowrap": "^1.23.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.5.0",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^9.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  }
+}
