@@ -517,41 +517,109 @@ export default function ResultsPage() {
               </div>
             )}
 
-            {/* Nearby Locations picker */}
+            {/* Nearby Locations — full listings like Google */}
             {data.nearbyLocations && data.nearbyLocations.length > 0 && (
               <div className="mb-8">
-                <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-3">
-                  <MapPin size={10} className="inline mr-1" />
-                  Nearby Locations
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                  {data.nearbyLocations.map((loc) => (
-                    <button
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">
+                    <MapPin size={10} className="inline mr-1" />
+                    {data.nearbyLocations.length} locations found
+                  </p>
+                  <span className="text-[10px] text-muted-foreground">Sorted by distance</span>
+                </div>
+                <div className="space-y-2.5">
+                  {data.nearbyLocations.map((loc, idx) => (
+                    <div
                       key={loc.id}
                       data-testid={`location-${loc.id}`}
-                      className="flex items-start gap-3 bg-card border border-border rounded-lg px-4 py-3 hover:border-primary/40 hover:bg-accent/10 transition-all text-left"
+                      className="bg-card border border-border rounded-xl p-4 hover:border-primary/30 transition-all"
                     >
-                      <div className="w-8 h-8 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
-                        <MapPin size={14} className="text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-semibold text-foreground truncate">{loc.name}</span>
-                          {loc.distance && (
-                            <span className="text-[10px] font-medium text-muted-foreground bg-secondary px-1.5 py-0.5 rounded shrink-0">{loc.distance}</span>
-                          )}
+                      <div className="flex items-start gap-4">
+                        {/* Rank number */}
+                        <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0">
+                          {idx + 1}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{loc.address}</p>
-                        {loc.rating && (
-                          <div className="flex items-center gap-1.5 mt-1">
-                            <StarRating rating={loc.rating} size={10} showValue />
-                            {loc.reviewCount && (
-                              <span className="text-[10px] text-muted-foreground">({loc.reviewCount})</span>
+
+                        {/* Location info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h3 className="text-sm font-bold text-foreground truncate">{loc.name}</h3>
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                                {loc.category && (
+                                  <span className="text-[10px] text-muted-foreground">{loc.category}</span>
+                                )}
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                  <MapPin size={9} className="shrink-0" />
+                                  {loc.address}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 mt-1.5">
+                                {loc.rating != null && (
+                                  <div className="flex items-center gap-1">
+                                    <StarRating rating={loc.rating} size={11} showValue />
+                                    {loc.reviewCount != null && (
+                                      <span className="text-[10px] text-muted-foreground">({loc.reviewCount.toLocaleString()})</span>
+                                    )}
+                                  </div>
+                                )}
+                                {loc.hours && (
+                                  <span className={cn(
+                                    "text-[10px] flex items-center gap-1",
+                                    loc.hours.includes("Closed") ? "text-red-400" : "text-green-500"
+                                  )}>
+                                    <Clock size={9} />
+                                    {loc.hours}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Distance badge */}
+                            {loc.distance && (
+                              <span className="text-[10px] font-semibold text-muted-foreground bg-secondary px-2 py-1 rounded-md shrink-0">
+                                {loc.distance}
+                              </span>
                             )}
                           </div>
-                        )}
+
+                          {/* Action buttons */}
+                          <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-border/50 flex-wrap">
+                            {loc.mapsUrl && (
+                              <a
+                                href={loc.mapsUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-[11px] font-semibold hover:bg-primary/20 transition-all"
+                              >
+                                <Navigation size={11} />
+                                Directions
+                              </a>
+                            )}
+                            {loc.phone && (
+                              <a
+                                href={`tel:${loc.phone.replace(/[^+\d]/g, "")}`}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-green-500/10 border border-green-500/20 text-green-500 text-[11px] font-semibold hover:bg-green-500/20 transition-all"
+                              >
+                                <Phone size={11} />
+                                {loc.phone}
+                              </a>
+                            )}
+                            {loc.website && (
+                              <a
+                                href={loc.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-secondary border border-border text-foreground text-[11px] font-semibold hover:border-primary/30 transition-all"
+                              >
+                                <Globe size={11} />
+                                Website
+                              </a>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>

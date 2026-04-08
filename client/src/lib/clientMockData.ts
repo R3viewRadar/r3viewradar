@@ -209,37 +209,65 @@ export function generateClientMockData(
     };
   });
 
-  // Generate nearby locations for chain businesses
-  const CHAIN_BUSINESSES = [
-    "trader joe", "starbucks", "chipotle", "mcdonald", "subway", "target", "walmart",
-    "costco", "whole foods", "walgreens", "cvs", "home depot", "lowes", "best buy",
-    "dunkin", "chick-fil-a", "panera", "olive garden", "applebee", "wendy",
-    "burger king", "taco bell", "panda express", "five guys", "shake shack",
-    "popeyes", "chili", "ihop", "denny", "pizza hut", "domino", "papa john",
-    "krispy kreme", "7-eleven", "wawa", "aldi", "publix", "safeway", "kroger",
-  ];
-  const isChain = type === "business" && CHAIN_BUSINESSES.some(c => query.toLowerCase().includes(c));
+  // Generate nearby locations for business searches
   let nearbyLocations: NearbyLocation[] | undefined;
 
-  if (isChain) {
+  if (type === "business") {
     const streets = [
       "Main St", "Broadway", "Market St", "Oak Ave", "Elm Blvd", "5th Ave",
       "Park Dr", "Pine Rd", "Cedar Ln", "Maple Way", "Highland Ave", "River Rd",
+      "Sunset Blvd", "Washington Ave", "Lincoln Blvd", "Wilshire Blvd", "Venice Blvd",
+      "Olympic Blvd", "Santa Monica Blvd", "Melrose Ave",
     ];
-    const cities = location && !location.match(/^-?\d+\./) 
-      ? [location, location, location, location, location, location]
-      : ["Beverly Hills, CA", "Santa Monica, CA", "West Hollywood, CA", "Los Angeles, CA", "Culver City, CA", "Pasadena, CA"];
+    const defaultCities = [
+      "Beverly Hills, CA", "Santa Monica, CA", "West Hollywood, CA",
+      "Los Angeles, CA", "Culver City, CA", "Pasadena, CA",
+      "Burbank, CA", "Glendale, CA", "Inglewood, CA",
+      "Long Beach, CA", "Torrance, CA", "Hollywood, CA",
+      "Marina del Rey, CA", "Redondo Beach, CA", "Manhattan Beach, CA",
+    ];
+    const cities = location && !location.match(/^-?\d+\./)
+      ? defaultCities.map((c, i) => i < 5 ? location : c)
+      : defaultCities;
 
-    nearbyLocations = Array.from({ length: 6 }, (_, i) => {
-      const dist = (0.3 + i * 1.2 + Math.random() * 0.8).toFixed(1);
+    const categoryMap: Record<string, string> = {
+      doctor: "Medical Practice", dentist: "Dental Office", dr: "Medical Practice",
+      restaurant: "Restaurant", pizza: "Pizza Restaurant", sushi: "Sushi Restaurant",
+      coffee: "Coffee Shop", starbucks: "Coffee Shop", dunkin: "Coffee & Donuts",
+      gym: "Fitness Center", salon: "Hair Salon", spa: "Spa & Wellness",
+      hotel: "Hotel", "best buy": "Electronics Store", target: "Department Store",
+      walmart: "Supercenter", costco: "Wholesale Club", "trader joe": "Grocery Store",
+      "whole foods": "Grocery Store", walgreens: "Pharmacy", cvs: "Pharmacy",
+      "home depot": "Hardware Store", chipotle: "Mexican Restaurant",
+      mcdonald: "Fast Food", subway: "Fast Food", "burger king": "Fast Food",
+    };
+    const queryLower = query.toLowerCase();
+    const detectedCat = Object.entries(categoryMap).find(([k]) => queryLower.includes(k))?.[1] || "Business";
+
+    const areaCode = ["212", "310", "415", "305", "312", "702", "404", "617", "503", "206"][query.length % 10];
+    const slug = query.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 20);
+    const count = randomBetween(12, 18);
+
+    nearbyLocations = Array.from({ length: count }, (_, i) => {
+      const dist = (0.2 + i * 0.8 + Math.random() * 1.5).toFixed(1);
       const streetNum = randomBetween(100, 9900);
+      const street = streets[i % streets.length];
+      const city = cities[i % cities.length];
+      const closingHour = 6 + randomBetween(0, 5);
+      const phone = `(${areaCode}) ${randomBetween(200, 999)}-${randomBetween(1000, 9999)}`;
+
       return {
         id: `loc-${i}`,
-        name: `${query} — ${pickRandom(streets)}`,
-        address: `${streetNum} ${streets[i % streets.length]}, ${cities[i % cities.length]}`,
+        name: `${query} — ${street}`,
+        address: `${streetNum} ${street}, ${city}`,
         distance: `${dist} mi`,
-        rating: Math.round((3.5 + Math.random() * 1.5) * 10) / 10,
-        reviewCount: randomBetween(40, 600),
+        rating: Math.round((2.8 + Math.random() * 2.2) * 10) / 10,
+        reviewCount: randomBetween(15, 800),
+        phone,
+        website: `https://www.${slug}.com`,
+        hours: Math.random() > 0.15 ? `Open until ${closingHour} PM` : "Closed now",
+        mapsUrl: `https://www.google.com/maps/search/${encodeURIComponent(query + " " + streetNum + " " + street + " " + city)}`,
+        category: detectedCat,
       };
     }).sort((a, b) => parseFloat(a.distance!) - parseFloat(b.distance!));
   }

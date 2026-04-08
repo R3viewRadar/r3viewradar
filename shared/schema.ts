@@ -64,6 +64,11 @@ export interface NearbyLocation {
   distance?: string; // e.g. "0.5 mi", "2.3 mi"
   rating?: number;
   reviewCount?: number;
+  phone?: string;
+  website?: string;
+  hours?: string;
+  mapsUrl?: string;
+  category?: string; // e.g. "Grocery Store", "Coffee Shop", "Dentist"
 }
 
 // Contact info for the searched entity
