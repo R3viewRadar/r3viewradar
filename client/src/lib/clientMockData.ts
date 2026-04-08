@@ -2,7 +2,7 @@
  * Client-side mock data generator — used as fallback when the backend API is unreachable
  * (e.g., when deployed to a static host like r3viewradar.com without the Express server).
  */
-import type { SearchResultData, Review, ReviewResult } from "@shared/schema";
+import type { SearchResultData, Review, ReviewResult, SourceLink, NearbyLocation } from "@shared/schema";
 
 const BUSINESS_PLATFORMS = [
   { name: "Google", icon: "google", url: "https://google.com/maps" },
@@ -154,6 +154,96 @@ export function generateClientMockData(
 
   const overallRating = Math.round((weightedSum / totalReviewsAll) * 10) / 10;
 
+  // Generate source links
+  const slug = query.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/, "");
+  const sourceLinks: SourceLink[] = platformDefs.map((p) => {
+    const urlMap: Record<string, { url: string; title: string; desc: string }> = {
+      Google: {
+        url: `https://www.google.com/maps/search/${encodeURIComponent(query)}`,
+        title: `${query} on Google Maps`,
+        desc: `See ratings, photos, hours, and directions for ${query} on Google Maps.`,
+      },
+      Yelp: {
+        url: `https://www.yelp.com/search?find_desc=${encodeURIComponent(query)}`,
+        title: `${query} on Yelp`,
+        desc: `Read community reviews, check menus, and find contact info on Yelp.`,
+      },
+      TripAdvisor: {
+        url: `https://www.tripadvisor.com/Search?q=${encodeURIComponent(query)}`,
+        title: `${query} on TripAdvisor`,
+        desc: `Traveler reviews, rankings, and photos for ${query}.`,
+      },
+      Facebook: {
+        url: `https://www.facebook.com/search/pages?q=${encodeURIComponent(query)}`,
+        title: `${query} on Facebook`,
+        desc: `Community page with posts, recommendations, and check-ins.`,
+      },
+      Reddit: {
+        url: `https://www.reddit.com/search/?q=${encodeURIComponent(query + " review")}`,
+        title: `${query} reviews on Reddit`,
+        desc: `Community discussions, honest opinions, and user experiences.`,
+      },
+      Amazon: {
+        url: `https://www.amazon.com/s?k=${encodeURIComponent(query)}`,
+        title: `${query} on Amazon`,
+        desc: `Product listings with verified purchase reviews and ratings.`,
+      },
+      Trustpilot: {
+        url: `https://www.trustpilot.com/search?query=${encodeURIComponent(query)}`,
+        title: `${query} on Trustpilot`,
+        desc: `Consumer trust ratings and detailed customer experiences.`,
+      },
+      "Best Buy": {
+        url: `https://www.bestbuy.com/site/searchpage.jsp?st=${encodeURIComponent(query)}`,
+        title: `${query} on Best Buy`,
+        desc: `Expert and customer reviews for electronics and tech products.`,
+      },
+    };
+    const info = urlMap[p.name] || { url: p.url, title: `${query} on ${p.name}`, desc: `Reviews on ${p.name}.` };
+    return {
+      platform: p.name,
+      platformIcon: p.icon,
+      url: info.url,
+      title: info.title,
+      description: info.desc,
+    };
+  });
+
+  // Generate nearby locations for chain businesses
+  const CHAIN_BUSINESSES = [
+    "trader joe", "starbucks", "chipotle", "mcdonald", "subway", "target", "walmart",
+    "costco", "whole foods", "walgreens", "cvs", "home depot", "lowes", "best buy",
+    "dunkin", "chick-fil-a", "panera", "olive garden", "applebee", "wendy",
+    "burger king", "taco bell", "panda express", "five guys", "shake shack",
+    "popeyes", "chili", "ihop", "denny", "pizza hut", "domino", "papa john",
+    "krispy kreme", "7-eleven", "wawa", "aldi", "publix", "safeway", "kroger",
+  ];
+  const isChain = type === "business" && CHAIN_BUSINESSES.some(c => query.toLowerCase().includes(c));
+  let nearbyLocations: NearbyLocation[] | undefined;
+
+  if (isChain) {
+    const streets = [
+      "Main St", "Broadway", "Market St", "Oak Ave", "Elm Blvd", "5th Ave",
+      "Park Dr", "Pine Rd", "Cedar Ln", "Maple Way", "Highland Ave", "River Rd",
+    ];
+    const cities = location && !location.match(/^-?\d+\./) 
+      ? [location, location, location, location, location, location]
+      : ["Beverly Hills, CA", "Santa Monica, CA", "West Hollywood, CA", "Los Angeles, CA", "Culver City, CA", "Pasadena, CA"];
+
+    nearbyLocations = Array.from({ length: 6 }, (_, i) => {
+      const dist = (0.3 + i * 1.2 + Math.random() * 0.8).toFixed(1);
+      const streetNum = randomBetween(100, 9900);
+      return {
+        id: `loc-${i}`,
+        name: `${query} — ${pickRandom(streets)}`,
+        address: `${streetNum} ${streets[i % streets.length]}, ${cities[i % cities.length]}`,
+        distance: `${dist} mi`,
+        rating: Math.round((3.5 + Math.random() * 1.5) * 10) / 10,
+        reviewCount: randomBetween(40, 600),
+      };
+    }).sort((a, b) => parseFloat(a.distance!) - parseFloat(b.distance!));
+  }
+
   return {
     search: {
       id: 1,
@@ -172,5 +262,7 @@ export function generateClientMockData(
       negative: negativeAll,
     },
     allReviews: allReviews.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    sourceLinks,
+    nearbyLocations,
   };
 }

@@ -47,6 +47,25 @@ export interface Review {
   platform: string;
 }
 
+// Source link for a platform
+export interface SourceLink {
+  platform: string;
+  platformIcon: string;
+  url: string;
+  title: string;
+  description: string;
+}
+
+// Nearby location option for multi-location businesses
+export interface NearbyLocation {
+  id: string;
+  name: string;
+  address: string;
+  distance?: string; // e.g. "0.5 mi", "2.3 mi"
+  rating?: number;
+  reviewCount?: number;
+}
+
 // Aggregated result for a search
 export interface SearchResultData {
   search: Search;
@@ -59,4 +78,6 @@ export interface SearchResultData {
     negative: number;
   };
   allReviews: Review[];
+  sourceLinks: SourceLink[];
+  nearbyLocations?: NearbyLocation[];
 }

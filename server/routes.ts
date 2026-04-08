@@ -5,7 +5,7 @@ import { searchAllPlatforms } from "./platforms/index";
 import { generateMockData } from "./mockData";
 import { insertSearchSchema } from "@shared/schema";
 import { getApiStatus } from "./apiConfig";
-import type { SearchResultData, Review } from "@shared/schema";
+import type { SearchResultData, Review, SourceLink } from "@shared/schema";
 
 export function registerRoutes(httpServer: Server, app: Express) {
   // POST /api/search — perform a new search
@@ -55,6 +55,15 @@ export function registerRoutes(httpServer: Server, app: Express) {
       const neutral = platformResults.reduce((sum, p) => sum + p.neutralCount, 0);
       const negative = platformResults.reduce((sum, p) => sum + p.negativeCount, 0);
 
+      // Generate source links
+      const sourceLinks: SourceLink[] = platformResults.map((p) => ({
+        platform: p.platform,
+        platformIcon: p.platformIcon,
+        url: p.url || `https://www.google.com/search?q=${encodeURIComponent(body.data.query + " " + p.platform + " reviews")}`,
+        title: `${body.data.query} on ${p.platform}`,
+        description: generateSourceDescription(p.platform, body.data.query),
+      }));
+
       const result: SearchResultData = {
         search,
         platforms: platformResults,
@@ -62,6 +71,7 @@ export function registerRoutes(httpServer: Server, app: Express) {
         totalReviews,
         sentimentBreakdown: { positive, neutral, negative },
         allReviews: allReviews.slice(0, 50),
+        sourceLinks,
       };
 
       storage.deleteOldSearches();
@@ -97,6 +107,14 @@ export function registerRoutes(httpServer: Server, app: Express) {
         ? platforms.reduce((sum, p) => sum + p.averageRating * p.totalReviews, 0) / totalReviews
         : 0;
 
+    const sourceLinks: SourceLink[] = platforms.map((p) => ({
+      platform: p.platform,
+      platformIcon: p.platformIcon,
+      url: p.url || `https://www.google.com/search?q=${encodeURIComponent(search.query + " " + p.platform + " reviews")}`,
+      title: `${search.query} on ${p.platform}`,
+      description: generateSourceDescription(p.platform, search.query),
+    }));
+
     const result: SearchResultData = {
       search,
       platforms,
@@ -108,6 +126,7 @@ export function registerRoutes(httpServer: Server, app: Express) {
         negative: platforms.reduce((sum, p) => sum + p.negativeCount, 0),
       },
       allReviews: allReviews.slice(0, 50),
+      sourceLinks,
     };
 
     return res.json(result);
@@ -123,4 +142,18 @@ export function registerRoutes(httpServer: Server, app: Express) {
   app.get("/api/status", (req, res) => {
     return res.json(getApiStatus());
   });
+}
+
+function generateSourceDescription(platform: string, query: string): string {
+  const map: Record<string, string> = {
+    Google: `See ratings, photos, hours, and directions for ${query} on Google Maps.`,
+    Yelp: `Read community reviews, check menus, and find contact info on Yelp.`,
+    TripAdvisor: `Traveler reviews, rankings, and photos for ${query}.`,
+    Facebook: `Community page with posts, recommendations, and check-ins.`,
+    Reddit: `Community discussions, honest opinions, and user experiences.`,
+    Amazon: `Product listings with verified purchase reviews and ratings.`,
+    Trustpilot: `Consumer trust ratings and detailed customer experiences.`,
+    "Best Buy": `Expert and customer reviews for electronics and tech products.`,
+  };
+  return map[platform] || `Reviews and ratings for ${query} on ${platform}.`;
 }

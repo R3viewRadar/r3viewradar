@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { SearchResultData, Review, ReviewResult } from "@shared/schema";
+import type { SearchResultData, Review, ReviewResult, SourceLink, NearbyLocation } from "@shared/schema";
 import { consumePendingResult } from "@/lib/searchStore";
 import { cn } from "@/lib/utils";
 
@@ -389,6 +389,76 @@ export default function ResultsPage() {
                 })()}
               </div>
             </div>
+
+            {/* Source Links */}
+            {data.sourceLinks && data.sourceLinks.length > 0 && (
+              <div className="mb-8">
+                <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-3">Source Links</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {data.sourceLinks.map((link) => (
+                    <a
+                      key={link.platform}
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-testid={`source-link-${link.platform.toLowerCase()}`}
+                      className="flex items-start gap-3 bg-card border border-border rounded-lg px-4 py-3 hover:border-primary/40 hover:bg-accent/10 transition-all group"
+                    >
+                      <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                        <PlatformIcon platform={link.platformIcon} size={16} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-semibold text-foreground truncate">{link.title}</span>
+                          <ExternalLink size={10} className="text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{link.description}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Nearby Locations picker */}
+            {data.nearbyLocations && data.nearbyLocations.length > 0 && (
+              <div className="mb-8">
+                <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-3">
+                  <MapPin size={10} className="inline mr-1" />
+                  Nearby Locations
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {data.nearbyLocations.map((loc) => (
+                    <button
+                      key={loc.id}
+                      data-testid={`location-${loc.id}`}
+                      className="flex items-start gap-3 bg-card border border-border rounded-lg px-4 py-3 hover:border-primary/40 hover:bg-accent/10 transition-all text-left"
+                    >
+                      <div className="w-8 h-8 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                        <MapPin size={14} className="text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold text-foreground truncate">{loc.name}</span>
+                          {loc.distance && (
+                            <span className="text-[10px] font-medium text-muted-foreground bg-secondary px-1.5 py-0.5 rounded shrink-0">{loc.distance}</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{loc.address}</p>
+                        {loc.rating && (
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <StarRating rating={loc.rating} size={10} showValue />
+                            {loc.reviewCount && (
+                              <span className="text-[10px] text-muted-foreground">({loc.reviewCount})</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Platform breakdown + Reviews grid */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
