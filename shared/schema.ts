@@ -27,13 +27,67 @@ export const reviewResults = sqliteTable("review_results", {
   url: text("url"),
 });
 
+// Users table
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  username: text("username").notNull(),
+  email: text("email").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+// Favorites table
+export const favorites = sqliteTable("favorites", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  query: text("query").notNull(),
+  type: text("type").notNull(), // "business" | "product"
+  location: text("location"),
+  note: text("note"),
+  createdAt: text("created_at").notNull(),
+});
+
+// Review alerts table
+export const alerts = sqliteTable("alerts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  query: text("query").notNull(),
+  type: text("type").notNull(),
+  location: text("location"),
+  active: integer("active").notNull().default(1),
+  lastChecked: text("last_checked"),
+  createdAt: text("created_at").notNull(),
+});
+
+// Comparisons table
+export const comparisons = sqliteTable("comparisons", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull(),
+  queryA: text("query_a").notNull(),
+  queryB: text("query_b").notNull(),
+  type: text("type").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
 export const insertSearchSchema = createInsertSchema(searches).omit({ id: true });
 export const insertReviewResultSchema = createInsertSchema(reviewResults).omit({ id: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true });
+export const insertFavoriteSchema = createInsertSchema(favorites).omit({ id: true });
+export const insertAlertSchema = createInsertSchema(alerts).omit({ id: true });
+export const insertComparisonSchema = createInsertSchema(comparisons).omit({ id: true });
 
 export type InsertSearch = z.infer<typeof insertSearchSchema>;
 export type InsertReviewResult = z.infer<typeof insertReviewResultSchema>;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertFavorite = z.infer<typeof insertFavoriteSchema>;
+export type InsertAlert = z.infer<typeof insertAlertSchema>;
+export type InsertComparison = z.infer<typeof insertComparisonSchema>;
 export type Search = typeof searches.$inferSelect;
 export type ReviewResult = typeof reviewResults.$inferSelect;
+export type User = typeof users.$inferSelect;
+export type Favorite = typeof favorites.$inferSelect;
+export type Alert = typeof alerts.$inferSelect;
+export type Comparison = typeof comparisons.$inferSelect;
 
 // Individual review type (stored as JSON in reviewResults.reviews)
 export interface Review {

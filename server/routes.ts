@@ -6,6 +6,11 @@ import { generateMockData } from "./mockData";
 import { insertSearchSchema } from "@shared/schema";
 import { getApiStatus } from "./apiConfig";
 import type { SearchResultData, Review, SourceLink, ContactInfo } from "@shared/schema";
+import crypto from "crypto";
+
+function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(password).digest("hex");
+}
 
 export function registerRoutes(httpServer: Server, app: Express) {
   // POST /api/search — perform a new search
@@ -147,6 +152,228 @@ export function registerRoutes(httpServer: Server, app: Express) {
   // GET /api/status — check which APIs are configured
   app.get("/api/status", (req, res) => {
     return res.json(getApiStatus());
+  });
+
+  // ---- AUTH ROUTES ----
+
+  // POST /api/auth/signup
+  app.post("/api/auth/signup", (req, res) => {
+    try {
+      const { username, email, password } = req.body;
+      if (!username || !email || !password) {
+        return res.status(400).json({ error: "username, email, and password are required" });
+      }
+
+      const existing = storage.getUserByEmail(email);
+      if (existing) {
+        return res.status(409).json({ error: "Email already registered" });
+      }
+
+      const passwordHash = hashPassword(password);
+      const user = storage.createUser({
+        username,
+        email,
+        passwordHash,
+        createdAt: new Date().toISOString(),
+      });
+
+      return res.json({ user: { id: user.id, username: user.username, email: user.email, createdAt: user.createdAt } });
+    } catch (err) {
+      console.error("Signup error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // POST /api/auth/login
+  app.post("/api/auth/login", (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: "email and password are required" });
+      }
+
+      const user = storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      const passwordHash = hashPassword(password);
+      if (user.passwordHash !== passwordHash) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+
+      return res.json({ user: { id: user.id, username: user.username, email: user.email, createdAt: user.createdAt } });
+    } catch (err) {
+      console.error("Login error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // GET /api/auth/user/:id
+  app.get("/api/auth/user/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+
+    const user = storage.getUserById(id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    return res.json({ id: user.id, username: user.username, email: user.email, createdAt: user.createdAt });
+  });
+
+  // ---- FAVORITES ROUTES ----
+
+  // GET /api/favorites/:userId
+  app.get("/api/favorites/:userId", (req, res) => {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) return res.status(400).json({ error: "Invalid userId" });
+    const favs = storage.getFavoritesByUserId(userId);
+    return res.json(favs);
+  });
+
+  // POST /api/favorites
+  app.post("/api/favorites", (req, res) => {
+    try {
+      const { userId, query, type, location, note } = req.body;
+      if (!userId || !query || !type) {
+        return res.status(400).json({ error: "userId, query, and type are required" });
+      }
+      const fav = storage.createFavorite({
+        userId,
+        query,
+        type,
+        location: location || null,
+        note: note || null,
+        createdAt: new Date().toISOString(),
+      });
+      return res.json(fav);
+    } catch (err) {
+      console.error("Create favorite error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // DELETE /api/favorites/:id
+  app.delete("/api/favorites/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    storage.deleteFavorite(id);
+    return res.json({ success: true });
+  });
+
+  // ---- ALERTS ROUTES ----
+
+  // GET /api/alerts/:userId
+  app.get("/api/alerts/:userId", (req, res) => {
+    const userId = parseInt(req.params.userId);
+    if (isNaN(userId)) return res.status(400).json({ error: "Invalid userId" });
+    const userAlerts = storage.getAlertsByUserId(userId);
+    return res.json(userAlerts);
+  });
+
+  // POST /api/alerts
+  app.post("/api/alerts", (req, res) => {
+    try {
+      const { userId, query, type, location } = req.body;
+      if (!userId || !query || !type) {
+        return res.status(400).json({ error: "userId, query, and type are required" });
+      }
+      const alert = storage.createAlert({
+        userId,
+        query,
+        type,
+        location: location || null,
+        active: 1,
+        lastChecked: null,
+        createdAt: new Date().toISOString(),
+      });
+      return res.json(alert);
+    } catch (err) {
+      console.error("Create alert error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // PATCH /api/alerts/:id/toggle
+  app.patch("/api/alerts/:id/toggle", (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    const alert = storage.toggleAlert(id);
+    if (!alert) return res.status(404).json({ error: "Alert not found" });
+    return res.json(alert);
+  });
+
+  // DELETE /api/alerts/:id
+  app.delete("/api/alerts/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+    storage.deleteAlert(id);
+    return res.json({ success: true });
+  });
+
+  // ---- COMPARE ROUTE ----
+
+  // POST /api/compare
+  app.post("/api/compare", async (req, res) => {
+    try {
+      const { queryA, queryB, type, userId } = req.body;
+      if (!queryA || !queryB || !type) {
+        return res.status(400).json({ error: "queryA, queryB, and type are required" });
+      }
+
+      // Run both searches in parallel
+      const [platformsA, platformsB] = await Promise.all([
+        searchAllPlatforms(queryA, type as "business" | "product", null),
+        searchAllPlatforms(queryB, type as "business" | "product", null),
+      ]);
+
+      const buildResult = (query: string, platforms: typeof platformsA) => {
+        const totalReviews = platforms.reduce((sum, p) => sum + p.totalReviews, 0);
+        const weightedRating =
+          totalReviews > 0
+            ? platforms.reduce((sum, p) => sum + p.averageRating * p.totalReviews, 0) / totalReviews
+            : 0;
+        const positive = platforms.reduce((sum, p) => sum + p.positiveCount, 0);
+        const neutral = platforms.reduce((sum, p) => sum + p.neutralCount, 0);
+        const negative = platforms.reduce((sum, p) => sum + p.negativeCount, 0);
+        const allReviews: Review[] = platforms
+          .flatMap((p) => {
+            try {
+              return JSON.parse(p.reviews) as Review[];
+            } catch {
+              return [];
+            }
+          })
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 5);
+        return {
+          query,
+          platforms,
+          overallRating: Math.round(weightedRating * 10) / 10,
+          totalReviews,
+          sentimentBreakdown: { positive, neutral, negative },
+          topReviews: allReviews,
+        };
+      };
+
+      const resultA = buildResult(queryA, platformsA);
+      const resultB = buildResult(queryB, platformsB);
+
+      // Optionally save comparison
+      if (userId) {
+        storage.createComparison({
+          userId,
+          queryA,
+          queryB,
+          type,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      return res.json({ a: resultA, b: resultB });
+    } catch (err) {
+      console.error("Compare error:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
   });
 }
 

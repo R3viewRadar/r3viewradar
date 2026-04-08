@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useLocation, Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft, Search, Building2, Package, ExternalLink,
   ThumbsUp, ThumbsDown, Minus, CheckCircle, Filter,
   ChevronDown, Star, Globe, TrendingUp, Wifi, WifiOff, AlertCircle, MapPin,
-  Phone, Mail, Map, Clock, Navigation
+  Phone, Mail, Map, Clock, Navigation, Heart, Bell
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { StarRating } from "@/components/StarRating";
@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/lib/authContext";
+import { useToast } from "@/hooks/use-toast";
 import type { SearchResultData, Review, ReviewResult, SourceLink, NearbyLocation } from "@shared/schema";
 import { consumePendingResult } from "@/lib/searchStore";
 import { cn } from "@/lib/utils";
@@ -223,9 +225,56 @@ export default function ResultsPage() {
   const [activePlatform, setActivePlatform] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"newest" | "highest" | "lowest">("newest");
   const [filterRating, setFilterRating] = useState<number | null>(null);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isAlerted, setIsAlerted] = useState(false);
   // Consume pending client-side data on first mount (static hosting fallback)
   const [clientData] = useState<SearchResultData | null>(() => consumePendingResult());
   const reviewsRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const favoriteMutation = useMutation({
+    mutationFn: async () => {
+      if (!user || !data) throw new Error("Not available");
+      const res = await apiRequest("POST", "/api/favorites", {
+        userId: user.id,
+        query: data.search.query,
+        type: data.search.type,
+        location: data.search.location || null,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      setIsFavorited(true);
+      toast({ title: "Saved to favorites", description: "View in your profile dashboard." });
+      qc.invalidateQueries({ queryKey: ["/api/favorites", user?.id] });
+    },
+    onError: () => {
+      toast({ title: "Could not save", description: "Sign in to save favorites.", variant: "destructive" });
+    },
+  });
+
+  const alertMutation = useMutation({
+    mutationFn: async () => {
+      if (!user || !data) throw new Error("Not available");
+      const res = await apiRequest("POST", "/api/alerts", {
+        userId: user.id,
+        query: data.search.query,
+        type: data.search.type,
+        location: data.search.location || null,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      setIsAlerted(true);
+      toast({ title: "Alert created", description: "You'll be notified of new reviews." });
+      qc.invalidateQueries({ queryKey: ["/api/alerts", user?.id] });
+    },
+    onError: () => {
+      toast({ title: "Could not create alert", description: "Sign in to set alerts.", variant: "destructive" });
+    },
+  });
 
   const { data: apiData, isLoading, error } = useQuery<SearchResultData>({
     queryKey: ["/api/search", params.id],
@@ -327,6 +376,43 @@ export default function ResultsPage() {
                 <p className="text-muted-foreground text-sm mt-1">
                   {data.totalReviews.toLocaleString()} reviews across {data.platforms.length} platforms
                 </p>
+              </div>
+              {/* Favorite + Alert buttons (visible when logged in) */}
+              <div className="flex items-center gap-2">
+                <button
+                  data-testid="favorite-button"
+                  onClick={() => {
+                    if (!user) { toast({ title: "Sign in required", description: "Sign in to save favorites.", variant: "destructive" }); return; }
+                    if (!isFavorited) favoriteMutation.mutate();
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all",
+                    isFavorited
+                      ? "bg-red-500/10 border-red-500/30 text-red-400"
+                      : "bg-secondary border-border text-muted-foreground hover:border-red-500/30 hover:text-red-400"
+                  )}
+                  title={user ? (isFavorited ? "Saved to favorites" : "Save to favorites") : "Sign in to save"}
+                >
+                  <Heart size={13} className={isFavorited ? "fill-current" : ""} />
+                  <span className="hidden sm:inline">{isFavorited ? "Saved" : "Save"}</span>
+                </button>
+                <button
+                  data-testid="alert-button"
+                  onClick={() => {
+                    if (!user) { toast({ title: "Sign in required", description: "Sign in to set alerts.", variant: "destructive" }); return; }
+                    if (!isAlerted) alertMutation.mutate();
+                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all",
+                    isAlerted
+                      ? "bg-primary/10 border-primary/30 text-primary"
+                      : "bg-secondary border-border text-muted-foreground hover:border-primary/30 hover:text-primary"
+                  )}
+                  title={user ? (isAlerted ? "Alert active" : "Set alert") : "Sign in to set alerts"}
+                >
+                  <Bell size={13} className={isAlerted ? "fill-current" : ""} />
+                  <span className="hidden sm:inline">{isAlerted ? "Alert On" : "Alert"}</span>
+                </button>
               </div>
             </div>
 

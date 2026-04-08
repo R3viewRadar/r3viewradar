@@ -1,0 +1,13 @@
+{
+  "name": "R3viewRadar",
+  "short_name": "R3viewRadar",
+  "description": "Every review. One search. Aggregated reviews from all platforms.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#141821",
+  "theme_color": "#0ea5e9",
+  "icons": [
+    { "src": "/icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" },
+    { "src": "/icon-512.svg", "sizes": "512x512", "type": "image/svg+xml" }
+  ]
+}

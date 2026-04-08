@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
-import { Search, Building2, Package, Clock, TrendingUp, ArrowRight, ChevronDown, MapPin, Locate, X } from "lucide-react";
+import { Search, Building2, Package, Clock, TrendingUp, ArrowRight, ChevronDown, MapPin, Locate, X, GitCompare, User, LogIn } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/Logo";
 import { PlatformIcon } from "@/components/PlatformIcon";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/authContext";
 import type { SearchResultData, Search as SearchType } from "@shared/schema";
 import { generateClientMockData } from "@/lib/clientMockData";
 import { setPendingResult } from "@/lib/searchStore";
@@ -37,6 +38,7 @@ export default function HomePage() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoLabel, setGeoLabel] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleUseMyLocation = useCallback(() => {
@@ -135,11 +137,27 @@ export default function HomePage() {
               How it works
             </Button>
           </Link>
-          <Link href="/how-it-works">
-            <Button variant="ghost" size="sm" className="text-muted-foreground text-sm hidden sm:flex">
-              API Status
+          <Link href="/compare">
+            <Button variant="ghost" size="sm" className="text-muted-foreground text-sm hidden sm:flex gap-1.5" data-testid="nav-compare">
+              <GitCompare size={13} />
+              Compare
             </Button>
           </Link>
+          {user ? (
+            <Link href="/profile">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-sm gap-1.5" data-testid="nav-profile">
+                <User size={13} />
+                <span className="hidden sm:inline">{user.username}</span>
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/auth">
+              <Button variant="ghost" size="sm" className="text-muted-foreground text-sm gap-1.5" data-testid="nav-signin">
+                <LogIn size={13} />
+                <span className="hidden sm:inline">Sign In</span>
+              </Button>
+            </Link>
+          )}
         </nav>
       </header>
 

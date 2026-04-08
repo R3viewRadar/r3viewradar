@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Background -->
+  <circle cx="256" cy="256" r="256" fill="#141821"/>
+  <!-- Outer ring -->
+  <circle cx="256" cy="256" r="210" stroke="#0ea5e9" stroke-width="10" fill="none" opacity="0.3"/>
+  <!-- Middle ring -->
+  <circle cx="256" cy="256" r="144" stroke="#0ea5e9" stroke-width="7" fill="none" opacity="0.55"/>
+  <!-- Inner circle -->
+  <circle cx="256" cy="256" r="72" fill="#0ea5e9"/>
+  <!-- Star inside -->
+  <path d="M256 204l13.8 28.8 31.4 4.6-22.7 22.1 5.4 31.2-28-14.7-28 14.7 5.4-31.2-22.7-22.1 31.4-4.6z" fill="white"/>
+  <!-- Radar sweep line -->
+  <line x1="256" y1="256" x2="432" y2="90" stroke="#0ea5e9" stroke-width="10" stroke-linecap="round" opacity="0.7"/>
+</svg>

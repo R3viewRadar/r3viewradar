@@ -14,6 +14,13 @@
     <meta name="twitter:description" content="Aggregated reviews from Google, Yelp, Amazon, Reddit, TripAdvisor, and more." />
     <link rel="canonical" href="https://r3viewradar.com" />
 
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0ea5e9" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-icon" href="/icon-192.svg" />
+
     <!-- Cabinet Grotesk from Fontshare -->
     <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,600,700,800&display=swap" rel="stylesheet" />
     <!-- Inter as fallback -->
@@ -26,5 +33,6 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
   </body>
 </html>
