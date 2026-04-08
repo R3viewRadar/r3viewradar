@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark-first theme: deep slate backgrounds with electric blue/cyan accent */
+    --background: 222 18% 8%;
+    --foreground: 215 20% 88%;
+
+    --card: 222 16% 11%;
+    --card-foreground: 215 20% 88%;
+
+    --popover: 222 16% 11%;
+    --popover-foreground: 215 20% 88%;
+
+    --primary: 192 85% 52%;
+    --primary-foreground: 222 18% 8%;
+
+    --secondary: 222 14% 16%;
+    --secondary-foreground: 215 18% 72%;
+
+    --muted: 222 14% 14%;
+    --muted-foreground: 215 12% 52%;
+
+    --accent: 192 60% 20%;
+    --accent-foreground: 192 85% 72%;
+
+    --destructive: 0 62% 52%;
+    --destructive-foreground: 215 20% 88%;
+
+    --border: 222 12% 18%;
+    --input: 222 12% 18%;
+    --ring: 192 85% 52%;
+
+    --radius: 0.5rem;
+
+    /* Custom tokens */
+    --color-positive: 142 60% 48%;
+    --color-positive-fg: 142 55% 72%;
+    --color-neutral: 45 70% 52%;
+    --color-neutral-fg: 45 65% 72%;
+    --color-negative: 0 65% 52%;
+    --color-negative-fg: 0 60% 72%;
+    --color-star: 40 95% 60%;
+
+    /* Sidebar */
+    --sidebar-background: 222 20% 6%;
+    --sidebar-foreground: 215 16% 72%;
+    --sidebar-primary: 192 85% 52%;
+    --sidebar-primary-foreground: 222 18% 8%;
+    --sidebar-accent: 222 14% 13%;
+    --sidebar-accent-foreground: 215 20% 88%;
+    --sidebar-border: 222 12% 14%;
+    --sidebar-ring: 192 85% 52%;
+  }
+  
+  /* Dark mode = same as root (dark-first design) */
+  .dark {
+    --background: 222 18% 8%;
+    --foreground: 215 20% 88%;
+    --card: 222 16% 11%;
+    --card-foreground: 215 20% 88%;
+    --popover: 222 16% 11%;
+    --popover-foreground: 215 20% 88%;
+    --primary: 192 85% 52%;
+    --primary-foreground: 222 18% 8%;
+    --secondary: 222 14% 16%;
+    --secondary-foreground: 215 18% 72%;
+    --muted: 222 14% 14%;
+    --muted-foreground: 215 12% 52%;
+    --accent: 192 60% 20%;
+    --accent-foreground: 192 85% 72%;
+    --destructive: 0 62% 52%;
+    --destructive-foreground: 215 20% 88%;
+    --border: 222 12% 18%;
+    --input: 222 12% 18%;
+    --ring: 192 85% 52%;
+    --sidebar-background: 222 20% 6%;
+    --sidebar-foreground: 215 16% 72%;
+    --sidebar-primary: 192 85% 52%;
+    --sidebar-primary-foreground: 222 18% 8%;
+    --sidebar-accent: 222 14% 13%;
+    --sidebar-accent-foreground: 215 20% 88%;
+    --sidebar-border: 222 12% 14%;
+    --sidebar-ring: 192 85% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Cabinet Grotesk', 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* Shimmer animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--secondary)) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.375rem;
+}
+
+/* Glow effect for primary elements */
+.glow-primary {
+  box-shadow: 0 0 20px hsl(var(--primary) / 0.25);
+}
+
+/* Star rating */
+.star-filled {
+  color: hsl(var(--color-star));
+}
+.star-empty {
+  color: hsl(var(--border));
+}
+
+/* Search bar glow on focus */
+.search-bar-wrap:focus-within {
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.4), 0 0 30px hsl(var(--primary) / 0.15);
+}
+
+/* Platform badge */
+.platform-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: hsl(var(--secondary));
+  color: hsl(var(--secondary-foreground));
+  border: 1px solid hsl(var(--border));
+}
+
+/* Animated score ring */
+@property --ring-pct {
+  syntax: '<percentage>';
+  initial-value: 0%;
+  inherits: false;
+}
+
+/* Review card hover */
+.review-card {
+  transition: background 180ms ease, border-color 180ms ease, transform 150ms ease;
+}
+.review-card:hover {
+  background: hsl(var(--secondary));
+  border-color: hsl(var(--primary) / 0.3);
+  transform: translateY(-1px);
+}
+
+/* Sentiment bar */
+.sentiment-bar {
+  height: 6px;
+  border-radius: 9999px;
+  transition: width 600ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Platform row */
+.platform-row {
+  transition: background 150ms ease;
+}
+.platform-row:hover {
+  background: hsl(var(--secondary));
+}
