@@ -379,7 +379,8 @@ export function registerRoutes(httpServer: Server, app: Express) {
 
 function generateContactInfo(query: string, type: "business" | "product", location?: string | null): ContactInfo {
   const slug = query.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 20);
-  const areaCode = ["212", "310", "415", "305", "312", "702", "404", "617", "503", "206"][query.length % 10];
+  const areaCode = getAreaCodeForLocation(location);
+  const userCity = resolveLocationToCity(location);
 
   if (type === "product") {
     return {
@@ -393,18 +394,100 @@ function generateContactInfo(query: string, type: "business" | "product", locati
   const streets = ["Main St", "Broadway", "Market St", "Oak Ave", "5th Ave", "Park Dr"];
   const street = streets[query.length % streets.length];
   const streetNum = 100 + (query.charCodeAt(0) * 37) % 9000;
-  const cities = location && !location.match(/^-?\d+\./) ? location : "Los Angeles, CA";
   const closingHour = 7 + (query.charCodeAt(0) % 5);
 
   return {
     name: query,
-    address: `${streetNum} ${street}, ${cities}`,
+    address: `${streetNum} ${street}, ${userCity}`,
     phone: `(${areaCode}) ${String(200 + query.length * 17).slice(0, 3)}-${String(1000 + query.charCodeAt(0) * 7).slice(0, 4)}`,
     email: `info@${slug}.com`,
     website: `https://www.${slug}.com`,
     mapsUrl: `https://www.google.com/maps/search/${encodeURIComponent(query + (location ? " " + location : ""))}`,
     hours: `Open until ${closingHour} PM`,
   };
+}
+
+function resolveLocationToCity(location?: string | null): string {
+  if (!location) return "New York, NY";
+  if (location.match(/^-?\d+\./)) return "Your Area";
+
+  const zipMap: Record<string, string> = {
+    "100": "New York, NY", "101": "New York, NY", "102": "New York, NY", "103": "Staten Island, NY",
+    "104": "Bronx, NY", "110": "Queens, NY", "111": "Long Island City, NY", "112": "Brooklyn, NY",
+    "200": "Washington, DC", "201": "Washington, DC", "206": "Washington, DC",
+    "210": "Baltimore, MD", "212": "Baltimore, MD",
+    "300": "Atlanta, GA", "303": "Atlanta, GA", "304": "Atlanta, GA",
+    "331": "Miami, FL", "332": "Miami, FL", "333": "Fort Lauderdale, FL",
+    "334": "West Palm Beach, FL", "336": "Tampa, FL",
+    "400": "Louisville, KY",
+    "432": "Columbus, OH", "441": "Cleveland, OH", "452": "Cincinnati, OH",
+    "460": "Indianapolis, IN",
+    "500": "Des Moines, IA",
+    "550": "Minneapolis, MN", "551": "St. Paul, MN",
+    "600": "Chicago, IL", "606": "Chicago, IL", "607": "Chicago, IL",
+    "630": "St. Louis, MO",
+    "700": "New Orleans, LA", "701": "New Orleans, LA",
+    "750": "Dallas, TX", "752": "Dallas, TX", "760": "Fort Worth, TX",
+    "770": "Houston, TX", "773": "Houston, TX",
+    "780": "San Antonio, TX", "786": "Austin, TX", "787": "Austin, TX",
+    "800": "Denver, CO", "802": "Denver, CO",
+    "850": "Phoenix, AZ", "852": "Phoenix, AZ", "853": "Phoenix, AZ",
+    "890": "Las Vegas, NV", "891": "Las Vegas, NV",
+    "900": "Los Angeles, CA", "901": "Los Angeles, CA", "902": "Inglewood, CA",
+    "904": "Santa Monica, CA", "910": "Pasadena, CA",
+    "920": "San Diego, CA", "921": "San Diego, CA",
+    "941": "San Francisco, CA", "943": "Palo Alto, CA", "945": "Oakland, CA",
+    "950": "San Jose, CA", "951": "San Jose, CA",
+    "970": "Portland, OR", "972": "Portland, OR",
+    "980": "Seattle, WA", "981": "Seattle, WA", "982": "Tacoma, WA",
+  };
+
+  const zipMatch = location.match(/^(\d{3})\d{2}$/);
+  if (zipMatch) return zipMap[zipMatch[1]] || `Zip ${location}`;
+
+  return location;
+}
+
+function getAreaCodeForLocation(location?: string | null): string {
+  if (!location) return "212";
+  const locLower = location.toLowerCase();
+
+  const cityAreaCodes: Record<string, string> = {
+    "new york": "212", "nyc": "212", "brooklyn": "718", "queens": "718", "bronx": "718",
+    "los angeles": "310", "hollywood": "323",
+    "san francisco": "415", "oakland": "510",
+    "chicago": "312", "houston": "713", "dallas": "214", "austin": "512",
+    "san antonio": "210", "fort worth": "817",
+    "miami": "305", "fort lauderdale": "954", "tampa": "813", "orlando": "407",
+    "atlanta": "404", "boston": "617", "seattle": "206", "portland": "503",
+    "denver": "303", "phoenix": "602", "las vegas": "702",
+    "san diego": "619", "san jose": "408",
+    "detroit": "313", "minneapolis": "612", "st. louis": "314",
+    "baltimore": "410", "washington": "202", "dc": "202",
+    "philadelphia": "215", "pittsburgh": "412",
+    "cleveland": "216", "columbus": "614", "cincinnati": "513",
+    "nashville": "615", "memphis": "901", "charlotte": "704",
+    "indianapolis": "317", "milwaukee": "414", "kansas city": "816",
+    "new orleans": "504", "salt lake": "801", "sacramento": "916",
+  };
+
+  for (const [city, code] of Object.entries(cityAreaCodes)) {
+    if (locLower.includes(city)) return code;
+  }
+
+  const zipMatch = location.match(/^(\d{3})/);
+  if (zipMatch) {
+    const zipAreaCodes: Record<string, string> = {
+      "100": "212", "112": "718", "200": "202", "210": "410", "300": "404",
+      "331": "305", "332": "305", "336": "813", "441": "216", "452": "513",
+      "600": "312", "606": "312", "700": "504", "750": "214", "770": "713",
+      "786": "512", "800": "303", "850": "602", "890": "702", "900": "310",
+      "920": "619", "941": "415", "950": "408", "970": "503", "980": "206",
+    };
+    return zipAreaCodes[zipMatch[1]] || "555";
+  }
+
+  return "555";
 }
 
 function generateSourceDescription(platform: string, query: string): string {
