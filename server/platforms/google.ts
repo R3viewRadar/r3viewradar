@@ -1,6 +1,6 @@
 import { config } from "../apiConfig";
 import { getCached, setCache, cacheKey } from "../cache";
-import type { Review } from "@shared/schema";
+import type { Review, NearbyLocation, ContactInfo } from "@shared/schema";
 
 interface GooglePlaceResult {
   id: string;
@@ -86,6 +86,125 @@ export async function searchGooglePlaces(query: string, type: "business" | "prod
     console.error("Google Places fetch error:", err);
     return null;
   }
+}
+
+/**
+ * Search for multiple nearby locations using Google Places Text Search.
+ * Returns real addresses, phone numbers, hours, ratings.
+ */
+export async function searchGoogleNearbyLocations(
+  query: string,
+  location?: string | null
+): Promise<{ locations: NearbyLocation[]; contactInfo?: ContactInfo } | null> {
+  const locSuffix = location ? `_${location}` : "";
+  const key = cacheKey("google_nearby", query + locSuffix, "business");
+  const cached = getCached<{ locations: NearbyLocation[]; contactInfo?: ContactInfo }>(key);
+  if (cached) return cached;
+
+  if (!config.GOOGLE_PLACES_API_KEY) return null;
+
+  try {
+    const requestBody: any = {
+      textQuery: location ? `${query} in ${location}` : query,
+      maxResultCount: 20,
+      languageCode: "en",
+    };
+
+    // If location is lat,lng, use locationBias
+    const latLngMatch = location?.match(/^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/);
+    if (latLngMatch) {
+      requestBody.textQuery = query;
+      requestBody.locationBias = {
+        circle: {
+          center: {
+            latitude: parseFloat(latLngMatch[1]),
+            longitude: parseFloat(latLngMatch[2]),
+          },
+          radius: 40000,
+        },
+      };
+    }
+
+    const res = await fetch(
+      "https://places.googleapis.com/v1/places:searchText",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": config.GOOGLE_PLACES_API_KEY,
+          "X-Goog-FieldMask":
+            "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.googleMapsUri,places.currentOpeningHours,places.types",
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+
+    if (!res.ok) {
+      console.error("Google Nearby error:", res.status);
+      return null;
+    }
+
+    const data = await res.json();
+    const places = data.places || [];
+
+    if (places.length === 0) return null;
+
+    const locations: NearbyLocation[] = places.map((p: any, i: number) => {
+      const isOpen = p.currentOpeningHours?.openNow;
+      const hoursText = isOpen === true ? "Open now" : isOpen === false ? "Closed now" : undefined;
+
+      return {
+        id: p.id || `gplace-${i}`,
+        name: p.displayName?.text || query,
+        address: p.formattedAddress || "",
+        rating: p.rating ? Math.round(p.rating * 10) / 10 : undefined,
+        reviewCount: p.userRatingCount || undefined,
+        phone: p.nationalPhoneNumber || p.internationalPhoneNumber || undefined,
+        website: p.websiteUri || undefined,
+        hours: hoursText || undefined,
+        mapsUrl: p.googleMapsUri || `https://www.google.com/maps/search/${encodeURIComponent(p.formattedAddress || query)}`,
+        category: formatPlaceTypes(p.types),
+      };
+    });
+
+    // Build contactInfo from the first result
+    const first = places[0];
+    const contactInfo: ContactInfo = {
+      name: first.displayName?.text || query,
+      address: first.formattedAddress || undefined,
+      phone: first.nationalPhoneNumber || first.internationalPhoneNumber || undefined,
+      email: undefined, // Google doesn't provide email
+      website: first.websiteUri || undefined,
+      mapsUrl: first.googleMapsUri || undefined,
+      hours: first.currentOpeningHours?.openNow === true ? "Open now" : first.currentOpeningHours?.openNow === false ? "Closed now" : undefined,
+    };
+
+    const result = { locations, contactInfo };
+    setCache(key, result);
+    return result;
+  } catch (err) {
+    console.error("Google Nearby fetch error:", err);
+    return null;
+  }
+}
+
+function formatPlaceTypes(types?: string[]): string | undefined {
+  if (!types || types.length === 0) return undefined;
+  const typeMap: Record<string, string> = {
+    restaurant: "Restaurant", cafe: "Cafe", coffee_shop: "Coffee Shop",
+    bar: "Bar", bakery: "Bakery", meal_takeaway: "Takeaway",
+    meal_delivery: "Delivery", grocery_or_supermarket: "Grocery Store",
+    supermarket: "Supermarket", store: "Store", shopping_mall: "Shopping Mall",
+    electronics_store: "Electronics Store", department_store: "Department Store",
+    hardware_store: "Hardware Store", pharmacy: "Pharmacy", drugstore: "Drugstore",
+    hospital: "Hospital", doctor: "Doctor", dentist: "Dentist",
+    gym: "Gym", hair_care: "Hair Salon", spa: "Spa",
+    lodging: "Hotel", gas_station: "Gas Station", bank: "Bank",
+  };
+  for (const t of types) {
+    if (typeMap[t]) return typeMap[t];
+  }
+  return undefined;
 }
 
 function formatResult(place: GooglePlaceResult, query: string) {

@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { Server } from "http";
 import { storage } from "./storage";
 import { searchAllPlatforms } from "./platforms/index";
+import { searchGoogleNearbyLocations } from "./platforms/google";
 import { generateMockData } from "./mockData";
 import { insertSearchSchema } from "@shared/schema";
 import { getApiStatus } from "./apiConfig";
@@ -69,8 +70,22 @@ export function registerRoutes(httpServer: Server, app: Express) {
         description: generateSourceDescription(p.platform, body.data.query),
       }));
 
-      const contactInfo = generateContactInfo(body.data.query, searchType, location);
-      const nearbyLocations = searchType === "business" ? generateNearbyLocations(body.data.query, location) : undefined;
+      // Try real Google data for locations + contact info, fall back to mock
+      let contactInfo: ContactInfo;
+      let nearbyLocations: NearbyLocation[] | undefined;
+
+      if (searchType === "business") {
+        const googleData = await searchGoogleNearbyLocations(body.data.query, location).catch(() => null);
+        if (googleData && googleData.locations.length > 0) {
+          nearbyLocations = googleData.locations;
+          contactInfo = googleData.contactInfo || generateContactInfo(body.data.query, searchType, location);
+        } else {
+          nearbyLocations = generateNearbyLocations(body.data.query, location);
+          contactInfo = generateContactInfo(body.data.query, searchType, location);
+        }
+      } else {
+        contactInfo = generateContactInfo(body.data.query, searchType, location);
+      }
 
       const result: SearchResultData = {
         search,
@@ -127,6 +142,7 @@ export function registerRoutes(httpServer: Server, app: Express) {
 
     const contactInfo = generateContactInfo(search.query, search.type as "business" | "product", search.location);
     const nearbyLocations = search.type === "business" ? generateNearbyLocations(search.query, search.location) : undefined;
+    // Note: GET endpoint uses mock locations since we don't re-query Google for cached results
 
     const result: SearchResultData = {
       search,
