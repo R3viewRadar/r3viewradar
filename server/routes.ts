@@ -5,7 +5,7 @@ import { searchAllPlatforms } from "./platforms/index";
 import { generateMockData } from "./mockData";
 import { insertSearchSchema } from "@shared/schema";
 import { getApiStatus } from "./apiConfig";
-import type { SearchResultData, Review, SourceLink, ContactInfo } from "@shared/schema";
+import type { SearchResultData, Review, SourceLink, ContactInfo, NearbyLocation } from "@shared/schema";
 import crypto from "crypto";
 
 function hashPassword(password: string): string {
@@ -70,6 +70,7 @@ export function registerRoutes(httpServer: Server, app: Express) {
       }));
 
       const contactInfo = generateContactInfo(body.data.query, searchType, location);
+      const nearbyLocations = searchType === "business" ? generateNearbyLocations(body.data.query, location) : undefined;
 
       const result: SearchResultData = {
         search,
@@ -80,6 +81,7 @@ export function registerRoutes(httpServer: Server, app: Express) {
         allReviews: allReviews.slice(0, 50),
         sourceLinks,
         contactInfo,
+        nearbyLocations,
       };
 
       storage.deleteOldSearches();
@@ -124,6 +126,7 @@ export function registerRoutes(httpServer: Server, app: Express) {
     }));
 
     const contactInfo = generateContactInfo(search.query, search.type as "business" | "product", search.location);
+    const nearbyLocations = search.type === "business" ? generateNearbyLocations(search.query, search.location) : undefined;
 
     const result: SearchResultData = {
       search,
@@ -138,6 +141,7 @@ export function registerRoutes(httpServer: Server, app: Express) {
       allReviews: allReviews.slice(0, 50),
       sourceLinks,
       contactInfo,
+      nearbyLocations,
     };
 
     return res.json(result);
@@ -488,6 +492,63 @@ function getAreaCodeForLocation(location?: string | null): string {
   }
 
   return "555";
+}
+
+function randomBetween(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateNearbyLocations(query: string, location?: string | null): NearbyLocation[] {
+  const streets = [
+    "Main St", "Broadway", "Market St", "Oak Ave", "Elm Blvd", "5th Ave",
+    "Park Dr", "Pine Rd", "Cedar Ln", "Maple Way", "Highland Ave", "River Rd",
+    "Washington Ave", "Lincoln Ave", "Commerce Blvd", "Central Ave", "Union St",
+    "Lake Dr", "Spring St", "Church Rd",
+  ];
+
+  const userCity = resolveLocationToCity(location);
+  const areaCode = getAreaCodeForLocation(location);
+  const slug = query.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 20);
+
+  const categoryMap: Record<string, string> = {
+    doctor: "Medical Practice", dentist: "Dental Office", dr: "Medical Practice",
+    restaurant: "Restaurant", pizza: "Pizza Restaurant", sushi: "Sushi Restaurant",
+    coffee: "Coffee Shop", starbucks: "Coffee Shop", dunkin: "Coffee & Donuts",
+    gym: "Fitness Center", salon: "Hair Salon", spa: "Spa & Wellness",
+    hotel: "Hotel", "best buy": "Electronics Store", target: "Department Store",
+    walmart: "Supercenter", costco: "Wholesale Club", "trader joe": "Grocery Store",
+    "whole foods": "Grocery Store", walgreens: "Pharmacy", cvs: "Pharmacy",
+    "home depot": "Hardware Store", chipotle: "Mexican Restaurant",
+    mcdonald: "Fast Food", subway: "Fast Food", "burger king": "Fast Food",
+  };
+  const queryLower = query.toLowerCase();
+  const detectedCat = Object.entries(categoryMap).find(([k]) => queryLower.includes(k))?.[1] || "Business";
+
+  const count = randomBetween(12, 18);
+
+  const locations: NearbyLocation[] = Array.from({ length: count }, (_, i) => {
+    const dist = (0.2 + i * 0.8 + Math.random() * 1.5).toFixed(1);
+    const streetNum = randomBetween(100, 9900);
+    const street = streets[i % streets.length];
+    const closingHour = 6 + randomBetween(0, 5);
+    const phone = `(${areaCode}) ${randomBetween(200, 999)}-${randomBetween(1000, 9999)}`;
+
+    return {
+      id: `loc-${i}`,
+      name: `${query} — ${street}`,
+      address: `${streetNum} ${street}, ${userCity}`,
+      distance: `${dist} mi`,
+      rating: Math.round((2.8 + Math.random() * 2.2) * 10) / 10,
+      reviewCount: randomBetween(15, 800),
+      phone,
+      website: `https://www.${slug}.com`,
+      hours: Math.random() > 0.15 ? `Open until ${closingHour} PM` : "Closed now",
+      mapsUrl: `https://www.google.com/maps/search/${encodeURIComponent(query + " " + streetNum + " " + street + " " + userCity)}`,
+      category: detectedCat,
+    };
+  });
+
+  return locations.sort((a, b) => parseFloat(a.distance!) - parseFloat(b.distance!));
 }
 
 function generateSourceDescription(platform: string, query: string): string {
